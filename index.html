@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Little Party RPG</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">A tiny idle RPG prototype</p>
+      <h1>Little Party RPG</h1>
+    </div>
+    <div class="top-stats">
+      <div><span class="muted">Gold</span><strong id="goldValue">0</strong></div>
+      <div><span class="muted">Party level</span><strong id="partyLevel">1</strong></div>
+      <div><span class="muted">Kills</span><strong id="killCount">0</strong></div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="battle-panel panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Auto battle</p>
+          <h2 id="enemyTitle">Green Slime · Lv. 1</h2>
+        </div>
+        <div class="battle-controls">
+          <button id="pauseButton" class="secondary">Pause</button>
+          <button id="fightButton">Fight now</button>
+        </div>
+      </div>
+      <div class="arena-wrap">
+        <canvas id="arena" width="900" height="340" aria-label="Party and enemy battle arena"></canvas>
+      </div>
+      <div class="battle-summary">
+        <div><span class="muted">Fight</span><strong id="fightNumber">1</strong></div>
+        <div><span class="muted">Duration</span><strong id="fightDuration">0.0s</strong></div>
+        <div><span class="muted">Last result</span><strong id="lastResult">Ready</strong></div>
+        <div><span class="muted">Next reward</span><strong id="nextReward">XP +1 · Gold +1</strong></div>
+      </div>
+      <p class="hint">The party automatically repeats this fight. Choose an enemy near your level to push onward.</p>
+    </section>
+
+    <section class="panel enemy-panel">
+      <div class="section-heading">
+        <div><p class="eyebrow">Hunting grounds</p><h2>Choose an enemy</h2></div>
+      </div>
+      <div id="enemyChoices" class="enemy-choices"></div>
+    </section>
+
+    <section class="panel party-panel">
+      <div class="section-heading">
+        <div><p class="eyebrow">Your party</p><h2>Four adventurers</h2></div>
+        <span class="muted small">All four join every fight</span>
+      </div>
+      <div id="partyCards" class="party-cards"></div>
+    </section>
+
+    <section class="panel equipment-panel">
+      <div class="section-heading">
+        <div><p class="eyebrow">Loadout</p><h2>Equipment & drops</h2></div>
+        <span class="muted small">Select a character to manage gear</span>
+      </div>
+      <div class="equipment-layout">
+        <div id="characterTabs" class="character-tabs"></div>
+        <div class="equipment-main">
+          <div id="equipmentSlots" class="equipment-slots"></div>
+          <div class="inventory-heading">
+            <h3>Inventory</h3>
+            <span class="muted small" id="inventoryCount">0 items</span>
+          </div>
+          <div id="inventoryList" class="inventory-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel log-panel">
+      <div class="section-heading">
+        <div><p class="eyebrow">Battle record</p><h2>Combat log</h2></div>
+        <div class="log-controls">
+          <label class="check-label"><input type="checkbox" id="autoScroll" checked> Follow latest</label>
+          <button id="clearLogButton" class="secondary small-button">Clear</button>
+        </div>
+      </div>
+      <div id="combatLog" class="combat-log" role="log" aria-live="polite"></div>
+      <div id="fightStats" class="fight-stats"></div>
+    </section>
+  </main>
+  <footer>Prototype build · Plain HTML, CSS, JavaScript and Canvas · No libraries</footer>
+  <script src="game.js"></script>
+</body>
+</html>
