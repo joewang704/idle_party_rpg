@@ -49,8 +49,14 @@ h3 { margin-bottom: 0; font-size: 14px; }
 .party-panel, .equipment-panel, .log-panel { grid-column: 1 / -1; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .battle-controls, .log-controls { display: flex; align-items: center; gap: 8px; }
-.arena-wrap { overflow: hidden; border: 1px solid #2a3547; border-radius: 11px; background: #111925; }
+.arena-wrap { position: relative; overflow: hidden; border: 1px solid #2a3547; border-radius: 11px; background: #111925; }
 #arena { display: block; width: 100%; height: auto; }
+.defeat-overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 20px; background: rgb(10 14 22 / 78%); text-align: center; }
+.defeat-overlay[hidden] { display: none; }
+.defeat-content { display: grid; justify-items: center; gap: 12px; }
+.defeat-content .eyebrow { color: var(--danger); }
+.defeat-content h2 { margin: 0; }
+.battle-log { padding-top: 20px; }
 .battle-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 13px 2px 2px; }
 .battle-summary strong { font-size: 13px; }
 .hint { margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }

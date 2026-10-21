@@ -22,17 +22,17 @@ const CLASS_DEFS = [
 ];
 
 const ENEMY_DEFS = [
-  { id: "slime", name: "Green Slime", level: 1, hp: 18, damage: 2, xp: 1, gold: 1, color: "#73cba0" },
-  { id: "mushroom", name: "Mushroom", level: 3, hp: 29, damage: 3, xp: 2, gold: 2, color: "#e5a66b" },
-  { id: "hornet", name: "Hornet", level: 6, hp: 45, damage: 4, xp: 3, gold: 3, color: "#e3cf70" },
-  { id: "stone_golem", name: "Stone Golem", level: 10, hp: 78, damage: 6, xp: 5, gold: 5, color: "#9aa7b8" },
-  { id: "wolf", name: "Forest Wolf", level: 15, hp: 112, damage: 8, xp: 7, gold: 7, color: "#c28b8b" },
-  { id: "wisp", name: "Blue Wisp", level: 22, hp: 160, damage: 11, xp: 10, gold: 10, color: "#82c8ec" },
-  { id: "ogre", name: "Ogre", level: 30, hp: 230, damage: 15, xp: 14, gold: 14, color: "#b5a0a0" },
-  { id: "drake", name: "Young Drake", level: 42, hp: 330, damage: 20, xp: 19, gold: 19, color: "#df8e71" },
-  { id: "gargoyle", name: "Gargoyle", level: 56, hp: 460, damage: 26, xp: 25, gold: 25, color: "#a9a3c8" },
-  { id: "dragon", name: "Small Dragon", level: 72, hp: 630, damage: 34, xp: 33, gold: 33, color: "#df7777" },
-  { id: "guardian", name: "Ancient Guardian", level: 90, hp: 850, damage: 43, xp: 43, gold: 43, color: "#d5c18c" }
+  { id: "slime", name: "Green Slime", level: 1, hp: 28, damage: 2, xp: 1, gold: 1, color: "#73cba0" },
+  { id: "mushroom", name: "Mushroom", level: 3, hp: 39, damage: 3, xp: 2, gold: 2, color: "#e5a66b" },
+  { id: "hornet", name: "Hornet", level: 6, hp: 55, damage: 4, xp: 3, gold: 3, color: "#e3cf70" },
+  { id: "stone_golem", name: "Stone Golem", level: 10, hp: 88, damage: 6, xp: 5, gold: 5, color: "#9aa7b8" },
+  { id: "wolf", name: "Forest Wolf", level: 15, hp: 132, damage: 8, xp: 7, gold: 7, color: "#c28b8b" },
+  { id: "wisp", name: "Blue Wisp", level: 22, hp: 190, damage: 11, xp: 10, gold: 10, color: "#82c8ec" },
+  { id: "ogre", name: "Ogre", level: 30, hp: 280, damage: 15, xp: 14, gold: 14, color: "#b5a0a0" },
+  { id: "drake", name: "Young Drake", level: 42, hp: 400, damage: 20, xp: 19, gold: 19, color: "#df8e71" },
+  { id: "gargoyle", name: "Gargoyle", level: 56, hp: 560, damage: 26, xp: 25, gold: 25, color: "#a9a3c8" },
+  { id: "dragon", name: "Small Dragon", level: 72, hp: 730, damage: 34, xp: 33, gold: 33, color: "#df7777" },
+  { id: "guardian", name: "Ancient Guardian", level: 90, hp: 950, damage: 43, xp: 43, gold: 43, color: "#d5c18c" }
 ];
 
 const SLOT_DEFS = [
@@ -70,6 +70,7 @@ const state = {
   selectedEnemyId: "slime",
   selectedCharacterId: "cleric",
   paused: false,
+  defeated: false,
   tick: 0,
   fightTicks: 0,
   fightStartedAt: Date.now(),
@@ -82,6 +83,7 @@ const state = {
   fightHealing: 0,
   fightTaken: 0,
   fightMisses: 0,
+  damageNumbers: [],
   totalDamage: 0,
   totalHealing: 0,
   inventory: [],
@@ -341,6 +343,9 @@ function escapeHtml(text) {
 
 function resetFight(logStart = true) {
   const enemy = getEnemy();
+  state.defeated = false;
+  state.damageNumbers = [];
+  $("defeatOverlay").hidden = true;
   state.enemyMaxHp = enemy.hp + Math.max(0, enemy.level - 1) * 1.4;
   state.enemyHp = state.enemyMaxHp;
   state.enemyAttackTimer = 0;
@@ -358,13 +363,13 @@ function resetFight(logStart = true) {
     character.fightDamage = 0;
   }
   if (logStart) addLog(`Fight ${state.fightNumber}: the party engages ${enemy.name} (Lv. ${enemy.level}).`, "system");
-  updateBattleSummary();
   renderParty();
   drawArena();
 }
 
 function chooseEnemy(enemyId) {
   state.selectedEnemyId = enemyId;
+  state.damageNumbers = [];
   const enemy = getEnemy();
   $("enemyTitle").textContent = `${enemy.name} · Lv. ${enemy.level}`;
   renderEnemies();
@@ -407,7 +412,7 @@ function resolveVictory() {
   addExperience(enemy.xp);
   addLog(`${enemy.name} defeated! +${enemy.xp} XP and +${enemy.gold} gold.`, "system");
 
-  const dropChance = Math.min(0.85, 0.55 + enemy.level / 250);
+  const dropChance = 0.05;
   if (Math.random() < dropChance) {
     const item = randomDrop(enemy);
     if (state.inventory.length < CONFIG.maxInventory) {
@@ -420,7 +425,6 @@ function resolveVictory() {
     addLog("No equipment dropped this time.", "system");
   }
 
-  $("lastResult").textContent = "Victory";
   state.fightNumber++;
   updateTopStats();
   renderParty();
@@ -431,11 +435,11 @@ function resolveVictory() {
 }
 
 function resolveDefeat() {
-  addLog("The party was overwhelmed. Everyone recovers and tries again.", "system");
-  $("lastResult").textContent = "Retrying";
-  state.fightNumber++;
-  updateTopStats();
-  resetFight(false);
+  if (state.defeated) return;
+  state.defeated = true;
+  addLog("The party was overwhelmed.", "system");
+  $("defeatOverlay").hidden = false;
+  $("retryButton").focus();
 }
 
 function attackCharacter(character) {
@@ -456,6 +460,8 @@ function attackCharacter(character) {
   }
   damage = Math.max(1, damage);
   state.enemyHp = Math.max(0, state.enemyHp - damage);
+  state.damageNumbers.push({ damage, color: character.color, startedAt: performance.now(), partyIndex: state.characters.indexOf(character) });
+  animateDamageNumbers();
   state.fightDamage += damage;
   state.totalDamage += damage;
   character.fightDamage += damage;
@@ -480,6 +486,8 @@ function useClericHealing() {
   state.fightHealing += healed;
   state.totalHealing += healed;
   cleric.totalHealing += healed;
+  state.damageNumbers.push({ damage: healed, color: "#7ff0a4", startedAt: performance.now(), targetId: target.id, incoming: true, healing: true });
+  animateDamageNumbers();
   addLog(`Cleric heals ${target.name} for ${healed} HP.`, "heal");
 }
 
@@ -505,6 +513,8 @@ function enemyAttack() {
   const damage = Math.max(1, raw - Math.floor(stats.armor * 0.5));
   target.hp = Math.max(0, target.hp - damage);
   state.fightTaken += damage;
+  state.damageNumbers.push({ damage, color: "#c4a7ff", startedAt: performance.now(), targetId: target.id, incoming: true });
+  animateDamageNumbers();
   addLog(`${enemy.name} hits ${target.name} for ${damage} damage.`, "damage");
   if (target.hp <= 0) {
     target.alive = false;
@@ -514,7 +524,7 @@ function enemyAttack() {
 }
 
 function gameTick() {
-  if (state.paused) return;
+  if (state.paused || state.defeated) return;
   const fightAtTickStart = state.fightNumber;
   state.tick++;
   state.fightTicks++;
@@ -541,20 +551,12 @@ function gameTick() {
 
   renderParty();
   drawArena();
-  updateBattleSummary();
   updateFightStats();
 }
 
 function updateTopStats() {
   $("goldValue").textContent = state.gold;
-  $("killCount").textContent = state.kills;
   $("partyLevel").textContent = Math.min(...state.characters.map(character => character.level));
-}
-
-function updateBattleSummary() {
-  $("fightNumber").textContent = state.fightNumber;
-  $("fightDuration").textContent = `${(state.fightTicks * CONFIG.tickMs / 1000).toFixed(1)}s`;
-  $("nextReward").textContent = `XP +${getEnemy().xp} · Gold +${getEnemy().gold}`;
 }
 
 function updateFightStats() {
@@ -746,6 +748,30 @@ function drawArena() {
   ctx.font = "11px system-ui";
   ctx.fillText(`${Math.ceil(state.enemyHp)} / ${Math.ceil(state.enemyMaxHp)} HP`, enemyX + enemySize / 2, enemyY + enemySize + 19);
 
+  const now = performance.now();
+  state.damageNumbers = state.damageNumbers.filter(number => now - number.startedAt < 1100);
+  for (const number of state.damageNumbers) {
+    const progress = (now - number.startedAt) / 1100;
+    ctx.globalAlpha = Math.min(1, (1 - progress) * 2.5);
+    ctx.textAlign = "center";
+    ctx.font = "bold 20px system-ui";
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#392522";
+    ctx.fillStyle = number.color;
+    const partyIndex = number.incoming
+      ? state.characters.findIndex(character => character.id === number.targetId)
+      : number.partyIndex;
+    const x = number.incoming
+      ? positions[partyIndex].x + 21
+      : enemyX + enemySize / 2 + (partyIndex - 1.5) * 42;
+    const y = number.incoming
+      ? positions[partyIndex].y - (number.healing ? 25 : 44) - progress * 42
+      : enemyY - 48 - (partyIndex % 2) * 12 - progress * 42;
+    ctx.strokeText(String(number.damage), x, y);
+    ctx.fillText(`${number.healing ? "+" : ""}${number.damage}`, x, y);
+  }
+  ctx.globalAlpha = 1;
+
   ctx.textAlign = "left";
   ctx.fillStyle = "#708099";
   ctx.font = "11px system-ui";
@@ -754,9 +780,23 @@ function drawArena() {
   ctx.fillText(state.paused ? "PAUSED" : "AUTO-FIGHT", 18, 22);
 }
 
+let damageAnimationFrame = null;
+
+function animateDamageNumbers() {
+  if (damageAnimationFrame !== null) return;
+  const animate = () => {
+    drawArena();
+    if (state.damageNumbers.length) {
+      damageAnimationFrame = requestAnimationFrame(animate);
+    } else {
+      damageAnimationFrame = null;
+    }
+  };
+  damageAnimationFrame = requestAnimationFrame(animate);
+}
+
 function renderAll() {
   updateTopStats();
-  updateBattleSummary();
   renderEnemies();
   renderParty();
   renderEquipment();
@@ -782,6 +822,7 @@ function bindEvents() {
   });
 
   $("fightButton").addEventListener("click", () => {
+    if (state.defeated) return;
     if (state.paused) {
       state.paused = false;
       $("pauseButton").textContent = "Pause";
@@ -790,6 +831,12 @@ function bindEvents() {
     // Make the next party action happen promptly without skipping the current enemy.
     state.partyAttackTimer = CONFIG.attackEveryTicks - 1;
     addLog("Party focuses on the current enemy.", "system");
+  });
+
+  $("retryButton").addEventListener("click", () => {
+    state.fightNumber++;
+    updateTopStats();
+    resetFight();
   });
 
   $("clearLogButton").addEventListener("click", () => {
