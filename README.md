@@ -21,11 +21,13 @@ Then open `http://localhost:8000`.
 - Four party members: Cleric, Mage, Archer, Knight.
 - Canvas battle view with simple square characters, labels, and health bars.
 - Automatic repeated battles, pause/resume, and a “Fight now” action.
+- Variable damage rolls for party and enemy attacks; enemies have a 5% critical-hit chance.
 - Enemies attack in order: Knight, Archer, Mage, Cleric.
 - Party revives and returns to full HP between fights.
 - Combat log with hits, critical hits, healing, evasion, defeat, XP, gold, and drops.
 - Fight stats: damage dealt, healing, damage taken, and evaded attacks.
 - Enemy selection through a level 90 list.
+- Party-wide XP and levels; every character shares the party's level and unlock progress.
 - Equipment slots for weapons, shields, four armor pieces, two rings, and a necklace.
 - Random item drops with up to four extra stat rolls, including low rolls.
 - Any item can roll any listed stat; percentage rolls are intentionally uncommon.

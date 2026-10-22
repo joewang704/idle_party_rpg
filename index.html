@@ -14,9 +14,16 @@
     </div>
     <div class="top-stats">
       <div><span class="muted">Gold</span><strong id="goldValue">0</strong></div>
-      <div><span class="muted">Party level</span><strong id="partyLevel">1</strong></div>
+      <div>
+        <span class="muted">Party level</span>
+        <strong id="partyLevel">1</strong>
+      </div>
+    </div>
+    <div id="partyXpBar" class="party-xp-bar" role="progressbar" aria-label="Party experience" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0">
+      <div id="partyXpFill" class="party-xp-fill"></div>
     </div>
   </header>
+  <div class="party-xp-caption"><span id="partyXpText" class="party-xp-text">0 / 8 XP</span></div>
 
   <main class="layout">
     <section class="battle-panel panel">
@@ -49,7 +56,12 @@
           </div>
         </div>
         <div id="combatLog" class="combat-log" role="log" aria-live="polite"></div>
-        <div id="fightStats" class="fight-stats"></div>
+      </div>
+      <div class="recent-drops">
+        <div class="section-heading">
+          <div><h3>Recent drops</h3></div>
+        </div>
+        <div id="recentDropsList" class="recent-drops-list"></div>
       </div>
     </section>
 
@@ -62,22 +74,20 @@
 
     <section class="panel party-panel">
       <div class="section-heading">
-        <div><p class="eyebrow">Your party</p><h2>Four adventurers</h2></div>
-        <span class="muted small">All four join every fight</span>
+        <div><h2>Party</h2></div>
       </div>
       <div id="partyCards" class="party-cards"></div>
     </section>
 
     <section class="panel equipment-panel">
       <div class="section-heading">
-        <div><p class="eyebrow">Loadout</p><h2>Equipment & drops</h2></div>
-        <span class="muted small">Select a character to manage gear</span>
+        <div><h2>Equipment</h2></div>
       </div>
       <div class="equipment-layout">
         <div id="characterTabs" class="character-tabs"></div>
         <div class="equipment-main">
           <div id="equipmentSlots" class="equipment-slots"></div>
-          <div class="inventory-heading">
+          <div class="inventory-heading" id="inventoryHeading">
             <h3>Inventory</h3>
             <span class="muted small" id="inventoryCount">0 items</span>
           </div>

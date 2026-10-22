@@ -9,6 +9,8 @@ const CONFIG = {
   tickMs: 650,
   attackEveryTicks: 2,
   enemyAttackEveryTicks: 2,
+  enemyCritRate: 5,
+  enemyCritDamage: 150,
   maxLevel: 100,
   maxRolls: 4,
   maxInventory: 80
@@ -22,17 +24,17 @@ const CLASS_DEFS = [
 ];
 
 const ENEMY_DEFS = [
-  { id: "slime", name: "Green Slime", level: 1, hp: 28, damage: 2, xp: 1, gold: 1, color: "#73cba0" },
-  { id: "mushroom", name: "Mushroom", level: 3, hp: 39, damage: 3, xp: 2, gold: 2, color: "#e5a66b" },
-  { id: "hornet", name: "Hornet", level: 6, hp: 55, damage: 4, xp: 3, gold: 3, color: "#e3cf70" },
-  { id: "stone_golem", name: "Stone Golem", level: 10, hp: 88, damage: 6, xp: 5, gold: 5, color: "#9aa7b8" },
-  { id: "wolf", name: "Forest Wolf", level: 15, hp: 132, damage: 8, xp: 7, gold: 7, color: "#c28b8b" },
-  { id: "wisp", name: "Blue Wisp", level: 22, hp: 190, damage: 11, xp: 10, gold: 10, color: "#82c8ec" },
-  { id: "ogre", name: "Ogre", level: 30, hp: 280, damage: 15, xp: 14, gold: 14, color: "#b5a0a0" },
-  { id: "drake", name: "Young Drake", level: 42, hp: 400, damage: 20, xp: 19, gold: 19, color: "#df8e71" },
-  { id: "gargoyle", name: "Gargoyle", level: 56, hp: 560, damage: 26, xp: 25, gold: 25, color: "#a9a3c8" },
-  { id: "dragon", name: "Small Dragon", level: 72, hp: 730, damage: 34, xp: 33, gold: 33, color: "#df7777" },
-  { id: "guardian", name: "Ancient Guardian", level: 90, hp: 950, damage: 43, xp: 43, gold: 43, color: "#d5c18c" }
+  { id: "slime", name: "Green Slime", level: 1, hp: 56, damage: 6, xp: 1, gold: 1, color: "#73cba0" },
+  { id: "mushroom", name: "Mushroom", level: 3, hp: 78, damage: 9, xp: 2, gold: 2, color: "#e5a66b" },
+  { id: "hornet", name: "Hornet", level: 6, hp: 110, damage: 12, xp: 3, gold: 3, color: "#e3cf70" },
+  { id: "stone_golem", name: "Stone Golem", level: 10, hp: 176, damage: 18, xp: 5, gold: 5, color: "#9aa7b8" },
+  { id: "wolf", name: "Forest Wolf", level: 15, hp: 264, damage: 24, xp: 7, gold: 7, color: "#c28b8b" },
+  { id: "wisp", name: "Blue Wisp", level: 22, hp: 380, damage: 33, xp: 10, gold: 10, color: "#82c8ec" },
+  { id: "ogre", name: "Ogre", level: 30, hp: 560, damage: 45, xp: 14, gold: 14, color: "#b5a0a0" },
+  { id: "drake", name: "Young Drake", level: 42, hp: 800, damage: 60, xp: 19, gold: 19, color: "#df8e71" },
+  { id: "gargoyle", name: "Gargoyle", level: 56, hp: 1120, damage: 78, xp: 25, gold: 25, color: "#a9a3c8" },
+  { id: "dragon", name: "Small Dragon", level: 72, hp: 1460, damage: 102, xp: 33, gold: 33, color: "#df7777" },
+  { id: "guardian", name: "Ancient Guardian", level: 90, hp: 1900, damage: 129, xp: 43, gold: 43, color: "#d5c18c" }
 ];
 
 const SLOT_DEFS = [
@@ -67,6 +69,8 @@ const state = {
   gold: 0,
   kills: 0,
   fightNumber: 1,
+  partyLevel: 1,
+  partyXp: 0,
   selectedEnemyId: "slime",
   selectedCharacterId: "cleric",
   paused: false,
@@ -87,14 +91,13 @@ const state = {
   totalDamage: 0,
   totalHealing: 0,
   inventory: [],
+  recentDrops: [],
   characters: []
 };
 
 function makeCharacter(def) {
   const character = {
     ...def,
-    level: 1,
-    xp: 0,
     hp: 20,
     maxHp: 20,
     alive: true,
@@ -162,40 +165,22 @@ function getEnemy() {
   return ENEMY_DEFS.find(enemy => enemy.id === state.selectedEnemyId) || ENEMY_DEFS[0];
 }
 
-function characterLevelForXp(xp) {
-  let level = 1;
-  let remaining = xp;
-  while (level < CONFIG.maxLevel) {
-    const needed = xpForNextLevel(level);
-    if (remaining < needed) break;
-    remaining -= needed;
-    level++;
-  }
-  return level;
+function getPartyLevel() {
+  return state.partyLevel;
 }
 
 function xpForNextLevel(level) {
   return 5 + level * 3;
 }
 
-function xpToReachNextLevel(character) {
-  let total = 0;
-  for (let level = 1; level < character.level; level++) total += xpForNextLevel(level);
-  return total;
-}
-
-function xpIntoCurrentLevel(character) {
-  return character.xp - xpToReachNextLevel(character);
-}
-
 function statTotals(character) {
   const totals = {
-    hp: 20 + character.level * 2,
+    hp: 20 + state.partyLevel * 2,
     armor: 0,
     evasion: 0,
-    physDamage: 1 + Math.floor(character.level / 8),
-    spellDamage: 1 + Math.floor(character.level / 8),
-    healing: character.id === "cleric" ? 2 + Math.floor(character.level / 8) : 0,
+    physDamage: state.partyLevel,
+    spellDamage: state.partyLevel,
+    healing: character.id === "cleric" ? 2 + Math.floor(state.partyLevel / 8) : 0,
     critRate: 0,
     critDamage: 150,
     hpPct: 0,
@@ -246,6 +231,16 @@ function itemScore(item) {
     + item.rolls.reduce((sum, roll) => sum + roll.value * (roll.kind === "globalPercent" ? 1.4 : 1), 0);
 }
 
+function itemSellValue(item) {
+  return Math.max(1, Math.round(item.level + itemScore(item)));
+}
+
+function isItemEquipped(itemId) {
+  return state.characters.some(character =>
+    Object.values(character.gear).some(item => item && item.id === itemId)
+  );
+}
+
 function equippedScore(character, slot) {
   const item = character.gear[slot];
   return item ? itemScore(item) : -1;
@@ -264,11 +259,26 @@ function equipItem(itemId, characterId, preferredSlot = null) {
   const previous = character.gear[slot];
   character.gear[slot] = item;
   state.inventory = state.inventory.filter(candidate => candidate.id !== item.id);
+  state.recentDrops = state.recentDrops.filter(candidate => candidate.id !== item.id);
   if (previous) state.inventory.unshift(previous);
   state.inventory = state.inventory.slice(0, CONFIG.maxInventory);
   recalculateParty();
   addLog(`${character.name} equipped ${itemName(item)} in ${SLOT_DEFS.find(def => def.id === slot).label}.`, "system");
   renderAll();
+}
+
+function sellItem(itemId) {
+  const item = state.inventory.find(candidate => candidate.id === itemId);
+  if (!item || isItemEquipped(itemId)) return;
+
+  const value = itemSellValue(item);
+  state.inventory = state.inventory.filter(candidate => candidate.id !== itemId);
+  state.recentDrops = state.recentDrops.filter(candidate => candidate.id !== itemId);
+  state.gold += value;
+  addLog(`Sold ${itemName(item)} for ${value} gold.`, "loot");
+  updateTopStats();
+  renderEquipment();
+  renderRecentDrops();
 }
 
 function unequipItem(characterId, slot) {
@@ -368,23 +378,22 @@ function resetFight(logStart = true) {
 }
 
 function chooseEnemy(enemyId) {
+  const enemy = ENEMY_DEFS.find(candidate => candidate.id === enemyId);
+  if (!enemy || enemy.level > getPartyLevel()) return;
   state.selectedEnemyId = enemyId;
   state.damageNumbers = [];
-  const enemy = getEnemy();
   $("enemyTitle").textContent = `${enemy.name} · Lv. ${enemy.level}`;
   renderEnemies();
   resetFight();
 }
 
 function addExperience(amount) {
-  for (const character of state.characters) {
-    if (character.level >= CONFIG.maxLevel) continue;
-    const before = character.level;
-    character.xp += amount;
-    character.level = characterLevelForXp(character.xp);
-    if (character.level > before) {
-      addLog(`${character.name} reached level ${character.level}!`, "system");
-    }
+  if (state.partyLevel >= CONFIG.maxLevel) return;
+  state.partyXp += amount;
+  while (state.partyLevel < CONFIG.maxLevel && state.partyXp >= xpForNextLevel(state.partyLevel)) {
+    state.partyXp -= xpForNextLevel(state.partyLevel);
+    state.partyLevel++;
+    addLog(`The party reached level ${state.partyLevel}!`, "system");
   }
 }
 
@@ -416,7 +425,10 @@ function resolveVictory() {
   if (Math.random() < dropChance) {
     const item = randomDrop(enemy);
     if (state.inventory.length < CONFIG.maxInventory) {
+      item.droppedAt = Date.now();
       state.inventory.unshift(item);
+      state.recentDrops.unshift(item);
+      state.recentDrops = state.recentDrops.slice(0, 5);
       addLog(`Loot: ${itemName(item)} — ${itemStatLines(item).replace(/\n/g, ", ")}.`, "loot");
     } else {
       addLog("Inventory full. The dropped item was left behind.", "system");
@@ -429,8 +441,8 @@ function resolveVictory() {
   updateTopStats();
   renderParty();
   renderEquipment();
+  renderRecentDrops();
   renderEnemies();
-  updateFightStats();
   resetFight(false);
 }
 
@@ -442,23 +454,40 @@ function resolveDefeat() {
   $("retryButton").focus();
 }
 
-function attackCharacter(character) {
-  if (!character.alive || state.enemyHp <= 0) return;
-  const stats = statTotals(character);
-  let damage = 1;
-  if (character.id === "cleric") {
-    damage += Math.floor(stats.spellDamage / 2);
-  } else if (character.id === "mage") {
+function baseDamagePerHit(character, stats = statTotals(character)) {
+  let damage = 0;
+  if (character.id === "cleric" || character.id === "mage") {
     damage += stats.spellDamage;
   } else {
     damage += stats.physDamage;
   }
+  return Math.max(1, damage);
+}
+
+function damageRange(baseDamage) {
+  const min = Math.max(1, Math.floor(baseDamage * 0.8));
+  const max = Math.max(min, Math.ceil(baseDamage * 1.2));
+  return { min, max };
+}
+
+function characterDamageRange(character, stats = statTotals(character)) {
+  return damageRange(baseDamagePerHit(character, stats));
+}
+
+function enemyDamageRange(enemy) {
+  return damageRange(enemy.damage + Math.floor(enemy.level / 12));
+}
+
+function attackCharacter(character) {
+  if (!character.alive || state.enemyHp <= 0) return null;
+  const stats = statTotals(character);
+  const range = characterDamageRange(character, stats);
+  let damage = randomInt(range.min, range.max);
   let critical = false;
   if (Math.random() * 100 < stats.critRate) {
     damage = Math.max(1, Math.round(damage * stats.critDamage / 100));
     critical = true;
   }
-  damage = Math.max(1, damage);
   state.enemyHp = Math.max(0, state.enemyHp - damage);
   state.damageNumbers.push({ damage, color: character.color, startedAt: performance.now(), partyIndex: state.characters.indexOf(character) });
   animateDamageNumbers();
@@ -466,8 +495,7 @@ function attackCharacter(character) {
   state.totalDamage += damage;
   character.fightDamage += damage;
   character.totalDamage += damage;
-  addLog(`${character.name} ${critical ? "critically " : ""}hits ${getEnemy().name} for ${damage} damage${critical ? "!" : "."}`);
-  if (state.enemyHp <= 0) resolveVictory();
+  return { name: character.name, damage, critical };
 }
 
 function useClericHealing() {
@@ -510,12 +538,15 @@ function enemyAttack() {
     return;
   }
   const raw = enemy.damage + Math.floor(enemy.level / 12);
-  const damage = Math.max(1, raw - Math.floor(stats.armor * 0.5));
+  const range = damageRange(raw);
+  let damage = Math.max(1, randomInt(range.min, range.max) - Math.floor(stats.armor * 0.5));
+  const critical = Math.random() * 100 < CONFIG.enemyCritRate;
+  if (critical) damage = Math.max(1, Math.round(damage * CONFIG.enemyCritDamage / 100));
   target.hp = Math.max(0, target.hp - damage);
   state.fightTaken += damage;
   state.damageNumbers.push({ damage, color: "#c4a7ff", startedAt: performance.now(), targetId: target.id, incoming: true });
   animateDamageNumbers();
-  addLog(`${enemy.name} hits ${target.name} for ${damage} damage.`, "damage");
+  addLog(`${enemy.name} ${critical ? "critically " : ""}hits ${target.name} for ${damage} damage${critical ? "!" : "."}`, "damage");
   if (target.hp <= 0) {
     target.alive = false;
     addLog(`${target.name} falls! The enemy will target the next character.`, "damage");
@@ -524,6 +555,7 @@ function enemyAttack() {
 }
 
 function gameTick() {
+  updateRecentDropTimes();
   if (state.paused || state.defeated) return;
   const fightAtTickStart = state.fightNumber;
   state.tick++;
@@ -533,15 +565,21 @@ function gameTick() {
 
   if (state.partyAttackTimer >= CONFIG.attackEveryTicks) {
     state.partyAttackTimer = 0;
-    // Cleric alternates between a small heal and an attack if healing is needed.
     const cleric = state.characters.find(character => character.id === "cleric");
     if (cleric && cleric.alive && state.characters.some(c => c.alive && c.hp < c.maxHp)) useClericHealing();
-    else if (cleric && cleric.alive) attackCharacter(cleric);
 
+    const enemyName = getEnemy().name;
+    const hits = [];
     for (const character of state.characters) {
-      if (character.id !== "cleric") attackCharacter(character);
-      if (state.enemyHp <= 0 || state.fightNumber !== fightAtTickStart) break;
+      const hit = attackCharacter(character);
+      if (hit) hits.push(hit);
+      if (state.enemyHp <= 0) break;
     }
+    if (hits.length) {
+      const hitSummary = hits.map(hit => `${hit.name} ${hit.critical ? "crits" : "hits"} for ${hit.damage}`).join(", ");
+      addLog(`Party hits ${enemyName}: ${hitSummary} damage.`);
+    }
+    if (state.enemyHp <= 0) resolveVictory();
   }
 
   if (state.fightNumber === fightAtTickStart && state.enemyHp > 0 && state.enemyAttackTimer >= CONFIG.enemyAttackEveryTicks) {
@@ -551,29 +589,47 @@ function gameTick() {
 
   renderParty();
   drawArena();
-  updateFightStats();
 }
 
 function updateTopStats() {
   $("goldValue").textContent = state.gold;
-  $("partyLevel").textContent = Math.min(...state.characters.map(character => character.level));
-}
+  const partyLevel = getPartyLevel();
+  $("partyLevel").textContent = partyLevel;
 
-function updateFightStats() {
-  $("fightStats").innerHTML = `
-    <div class="stat-chip"><span>Party damage this fight</span><strong>${state.fightDamage}</strong></div>
-    <div class="stat-chip"><span>Healing this fight</span><strong>${state.fightHealing}</strong></div>
-    <div class="stat-chip"><span>Damage taken</span><strong>${state.fightTaken}</strong></div>
-    <div class="stat-chip"><span>Attacks evaded</span><strong>${state.fightMisses}</strong></div>`;
+  const xpBar = $("partyXpBar");
+  const xpFill = $("partyXpFill");
+  const xpText = $("partyXpText");
+  if (partyLevel >= CONFIG.maxLevel) {
+    xpBar.setAttribute("aria-valuemax", "1");
+    xpBar.setAttribute("aria-valuenow", "1");
+    xpBar.title = `Party level ${partyLevel} — maximum level`;
+    xpText.textContent = "MAX LEVEL";
+    xpFill.style.width = "100%";
+    return;
+  }
+
+  const xpNeeded = xpForNextLevel(partyLevel);
+  const xpProgress = state.partyXp;
+  const progressPercent = Math.max(0, Math.min(100, xpProgress / xpNeeded * 100));
+  xpText.textContent = `${xpProgress} / ${xpNeeded} XP`;
+  xpBar.setAttribute("aria-valuemax", String(xpNeeded));
+  xpBar.setAttribute("aria-valuenow", String(xpProgress));
+  xpBar.title = `Party XP: ${xpProgress} / ${xpNeeded} to level ${partyLevel + 1}`;
+  xpFill.style.width = `${progressPercent}%`;
 }
 
 function renderEnemies() {
   const host = $("enemyChoices");
   host.innerHTML = "";
+  const partyLevel = getPartyLevel();
   for (const enemy of ENEMY_DEFS) {
+    const locked = enemy.level > partyLevel;
     const button = document.createElement("button");
     button.className = `enemy-choice ${enemy.id === state.selectedEnemyId ? "selected" : ""}`;
-    button.innerHTML = `<span><span class="enemy-name">${enemy.name}</span><span class="enemy-info">${enemy.hp} HP · ${enemy.damage} damage · ${enemy.xp} XP</span></span><span class="level-pill">Lv. ${enemy.level}</span>`;
+    button.disabled = locked;
+    button.title = locked ? `Reach party level ${enemy.level} to unlock this enemy.` : "";
+    const damage = enemyDamageRange(enemy);
+    button.innerHTML = `<span><span class="enemy-name">${enemy.name}</span><span class="enemy-info">${enemy.hp} HP · ${damage.min}-${damage.max} damage · ${enemy.xp} XP</span></span><span class="level-pill">Lv. ${enemy.level}</span>`;
     button.addEventListener("click", () => chooseEnemy(enemy.id));
     host.appendChild(button);
   }
@@ -584,6 +640,7 @@ function renderParty() {
   host.innerHTML = "";
   for (const character of state.characters) {
     const stats = statTotals(character);
+    const damage = characterDamageRange(character, stats);
     const pct = Math.max(0, Math.min(100, character.hp / Math.max(1, character.maxHp) * 100));
     const card = document.createElement("button");
     card.type = "button";
@@ -594,12 +651,12 @@ function renderParty() {
     card.innerHTML = `
       <div class="party-card-head">
         <div class="portrait" style="background:${character.color}">${character.mark}</div>
-        <div><h3>${character.name}</h3><div class="subline">${character.role} · Lv. ${character.level}</div></div>
+        <div><h3>${character.name}</h3><div class="subline">${character.role} · Lv. ${state.partyLevel}</div></div>
       </div>
       <div class="health-line"><span>${character.alive ? "HP" : "Down"}</span><span>${character.hp}/${character.maxHp}</span></div>
       <div class="health-track"><div class="health-fill ${pct < 30 ? "low" : ""}" style="width:${pct}%"></div></div>
       <div class="mini-stats">
-        <div class="mini-stat"><span>Damage</span><strong>${character.fightDamage}</strong></div>
+        <div class="mini-stat" title="Non-critical damage range per attack"><span>Damage / hit</span><strong>${damage.min}-${damage.max}</strong></div>
         <div class="mini-stat"><span>Armor</span><strong>${stats.armor}</strong></div>
         <div class="mini-stat"><span>Evasion</span><strong>${stats.evasion}%</strong></div>
         <div class="mini-stat"><span>Crit</span><strong>${stats.critRate}%</strong></div>
@@ -619,7 +676,7 @@ function renderEquipment() {
   tabs.innerHTML = "";
   for (const candidate of state.characters) {
     const button = document.createElement("button");
-    button.textContent = `${candidate.name} · Lv.${candidate.level}`;
+    button.textContent = `${candidate.name} · Lv.${state.partyLevel}`;
     button.className = candidate.id === character.id ? "active" : "";
     button.addEventListener("click", () => {
       state.selectedCharacterId = candidate.id;
@@ -664,13 +721,60 @@ function renderEquipment() {
         <div class="item-type">${escapeHtml(item.type)} · ${item.rolls.length} roll${item.rolls.length === 1 ? "" : "s"}</div>
         <div class="item-stats">${escapeHtml(itemStatLines(item))}</div>
       </div>
-      <button ${canEquip ? "" : "disabled"}>Equip</button>`;
-    card.querySelector("button").addEventListener("click", () => {
+      <div class="inventory-actions">
+        <button ${canEquip ? "" : "disabled"}>Equip</button>
+        <button class="secondary" data-sell>Sell · ${itemSellValue(item)}g</button>
+      </div>`;
+    card.querySelector(".inventory-actions button").addEventListener("click", () => {
       if (!canEquip) return;
       const preferred = compatible.find(slot => !character.gear[slot]) || compatible[0];
       equipItem(item.id, character.id, preferred);
     });
+    card.querySelector("[data-sell]").addEventListener("click", () => sellItem(item.id));
     inventory.appendChild(card);
+  }
+}
+
+function renderRecentDrops() {
+  const host = $("recentDropsList");
+  host.innerHTML = "";
+  if (!state.recentDrops.length) {
+    host.innerHTML = `<div class="recent-drops-empty">No recent drops yet.</div>`;
+    return;
+  }
+
+  for (const item of state.recentDrops) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "recent-drop";
+    button.innerHTML = `<span class="recent-drop-heading"><span class="recent-drop-name">${escapeHtml(itemName(item))}</span><span class="recent-drop-time"></span></span><span class="recent-drop-stats">${escapeHtml(itemStatLines(item).replace(/\n/g, " · "))}</span>`;
+    button.querySelector(".recent-drop-time").dataset.itemId = item.id;
+    button.addEventListener("click", () => {
+      $("inventoryList").scrollTop = 0;
+      $("inventoryHeading").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    host.appendChild(button);
+  }
+  updateRecentDropTimes();
+}
+
+function formatTimeAgo(timestamp, now = Date.now()) {
+  const seconds = Math.max(1, Math.floor((now - timestamp) / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+function updateRecentDropTimes() {
+  const now = Date.now();
+  for (const label of document.querySelectorAll(".recent-drop-time")) {
+    const item = state.recentDrops.find(drop => drop.id === label.dataset.itemId);
+    if (!item || !item.droppedAt) continue;
+    label.textContent = formatTimeAgo(item.droppedAt, now);
+    label.title = new Date(item.droppedAt).toLocaleString();
   }
 }
 
@@ -693,13 +797,6 @@ function drawArena() {
   // Simple background and ground. The canvas is deliberately art-free for now.
   ctx.fillStyle = "#111925";
   ctx.fillRect(0, 0, width, height);
-  ctx.fillStyle = "#172333";
-  ctx.fillRect(0, height - 55, width, 55);
-  ctx.strokeStyle = "#28364a";
-  ctx.beginPath();
-  ctx.moveTo(0, height - 55);
-  ctx.lineTo(width, height - 55);
-  ctx.stroke();
 
   const positions = [
     { x: 75, y: 190 },  // healer at the back
@@ -723,8 +820,11 @@ function drawArena() {
     ctx.fillText(character.mark, pos.x + size / 2, pos.y + 27);
     ctx.fillStyle = "#e8edf7";
     ctx.font = "12px system-ui";
-    ctx.fillText(character.name, pos.x + size / 2, pos.y - 17);
-    drawBar(ctx, pos.x - 5, pos.y - 10, size + 10, 5, character.hp, character.maxHp, character.alive ? "#83d6b0" : "#a44e5a");
+    ctx.fillText(character.name, pos.x + size / 2, pos.y + size + 13);
+    drawBar(ctx, pos.x - 5, pos.y + size + 17, size + 10, 5, character.hp, character.maxHp, character.alive ? "#83d6b0" : "#a44e5a");
+    ctx.fillStyle = "#9ca8bd";
+    ctx.font = "10px system-ui";
+    ctx.fillText(`${Math.ceil(character.hp)} / ${Math.ceil(character.maxHp)} HP`, pos.x + size / 2, pos.y + size + 35);
   });
 
   const enemy = getEnemy();
@@ -742,11 +842,11 @@ function drawArena() {
   ctx.fillText("!", enemyX + enemySize / 2, enemyY + 47);
   ctx.fillStyle = "#e8edf7";
   ctx.font = "13px system-ui";
-  ctx.fillText(enemy.name, enemyX + enemySize / 2, enemyY - 24);
-  drawBar(ctx, enemyX - 8, enemyY - 14, enemySize + 16, 7, state.enemyHp, state.enemyMaxHp, "#e67e83");
+  ctx.fillText(enemy.name, enemyX + enemySize / 2, enemyY + enemySize + 14);
+  drawBar(ctx, enemyX - 8, enemyY + enemySize + 19, enemySize + 16, 7, state.enemyHp, state.enemyMaxHp, "#e67e83");
   ctx.fillStyle = "#9ca8bd";
   ctx.font = "11px system-ui";
-  ctx.fillText(`${Math.ceil(state.enemyHp)} / ${Math.ceil(state.enemyMaxHp)} HP`, enemyX + enemySize / 2, enemyY + enemySize + 19);
+  ctx.fillText(`${Math.ceil(state.enemyHp)} / ${Math.ceil(state.enemyMaxHp)} HP`, enemyX + enemySize / 2, enemyY + enemySize + 43);
 
   const now = performance.now();
   state.damageNumbers = state.damageNumbers.filter(number => now - number.startedAt < 1100);
@@ -772,12 +872,6 @@ function drawArena() {
   }
   ctx.globalAlpha = 1;
 
-  ctx.textAlign = "left";
-  ctx.fillStyle = "#708099";
-  ctx.font = "11px system-ui";
-  ctx.fillText("BACK LINE", 40, 305);
-  ctx.fillText("FRONT LINE", 335, 305);
-  ctx.fillText(state.paused ? "PAUSED" : "AUTO-FIGHT", 18, 22);
 }
 
 let damageAnimationFrame = null;
@@ -800,7 +894,7 @@ function renderAll() {
   renderEnemies();
   renderParty();
   renderEquipment();
-  updateFightStats();
+  renderRecentDrops();
   drawArena();
 }
 
@@ -868,8 +962,7 @@ function startGame() {
   resetFight(false);
   bindEvents();
   renderAll();
-  addLog("Your party is ready. The Green Slime is an easy first target.", "system");
-  addLog("The Knight stands at the front; enemies attack from right to left.", "system");
+  addLog("Welcome to Oaken!", "system");
   window.setInterval(gameTick, CONFIG.tickMs);
 }
 
